@@ -256,8 +256,28 @@ function App() {
 
     try {
       const rpc = await useClient.rpc(useSession, 'get_leaderboard', { limit: 10 })
-      const body = (rpc.payload || {}) as { records?: LeaderboardRecord[] }
-      setLeaderboard(body.records || [])
+      let body: { records?: LeaderboardRecord[] } = {}
+      const payload: unknown = rpc.payload
+
+      if (typeof payload === 'string' && payload.trim().length > 0) {
+        body = JSON.parse(payload) as { records?: LeaderboardRecord[] }
+      } else if (payload && typeof payload === 'object') {
+        body = payload as { records?: LeaderboardRecord[] }
+      }
+
+      const normalized = (body.records || []).map((entry) => ({
+        owner_id: entry.owner_id || 'unknown-player',
+        username: entry.username,
+        score: Number(entry.score || 0),
+        subscore: Number(entry.subscore || 0),
+        metadata: {
+          wins: Number(entry.metadata?.wins ?? entry.score ?? 0),
+          losses: Number(entry.metadata?.losses ?? 0),
+          streak: Number(entry.metadata?.streak ?? entry.subscore ?? 0),
+        },
+      }))
+
+      setLeaderboard(normalized)
     } catch (error) {
       setStatusLine('Leaderboard is not available yet.')
     }

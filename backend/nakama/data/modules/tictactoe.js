@@ -3,6 +3,8 @@ var OpCode = {
   REMATCH: 2,
 };
 
+var MATCH_TTL_SECONDS = 60 * 60;
+
 var WIN_LINES = [
   [0, 1, 2],
   [3, 4, 5],
@@ -33,6 +35,7 @@ function initialState(params) {
     turnTimeoutSeconds: timeoutSeconds,
     turnDeadlineTick: null,
     currentTick: 0,
+    expireTick: MATCH_TTL_SECONDS,
     turnSecondsLeft: null,
     lastError: null,
   };
@@ -212,6 +215,14 @@ function matchInit(ctx, logger, nk, params) {
 }
 
 function matchJoinAttempt(ctx, logger, nk, dispatcher, tick, state, presence, metadata) {
+  if (tick >= state.expireTick) {
+    return {
+      state: state,
+      accept: false,
+      rejectMessage: "Match expired.",
+    };
+  }
+
   var count = Object.keys(state.players).length;
   if (count >= 2 && !state.players[presence.userId]) {
     return {
@@ -274,6 +285,16 @@ function matchLeave(ctx, logger, nk, dispatcher, tick, state, presences) {
 
 function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
   state.currentTick = tick;
+
+  if (tick >= state.expireTick) {
+    state.status = "finished";
+    state.winnerUserId = null;
+    state.winnerSymbol = null;
+    state.lastError = "Match expired after 1 hour.";
+    sendState(dispatcher, state);
+    return null;
+  }
+
   if (state.mode === "timed" && state.status === "playing" && state.turnDeadlineTick !== null) {
     state.turnSecondsLeft = Math.max(0, state.turnDeadlineTick - tick);
   }
@@ -420,8 +441,83 @@ function getStats(nk, userId) {
 
 function listLeaderboard(nk, limit) {
   var max = Number(limit) || 20;
-  var records = nk.leaderboardRecordsList("global_wins", null, max, null, 0, null);
-  return records;
+  var listed = nk.leaderboardRecordsList("global_wins", null, max, null, 0, null);
+  var raw = (listed && listed.records) || [];
+
+  var userIds = [];
+  for (var i = 0; i < raw.length; i++) {
+    var ownerId = raw[i].ownerId || raw[i].owner_id;
+    if (ownerId) {
+      userIds.push(ownerId);
+    }
+  }
+
+  var usernamesById = {};
+  if (userIds.length > 0) {
+    try {
+      var users = nk.usersGetId(userIds);
+      for (var j = 0; j < users.length; j++) {
+        var user = users[j];
+        usernamesById[user.userId] = user.username;
+      }
+    } catch (err) {
+      // Username lookup is best-effort only.
+    }
+  }
+
+  var statsById = {};
+  if (userIds.length > 0) {
+    var readReq = [];
+    for (var k = 0; k < userIds.length; k++) {
+      readReq.push({ collection: "player_stats", key: "summary", userId: userIds[k] });
+    }
+
+    var statsRows = nk.storageRead(readReq);
+    for (var m = 0; m < statsRows.length; m++) {
+      statsById[statsRows[m].userId] = statsRows[m].value || {};
+    }
+  }
+
+  var records = [];
+  for (var n = 0; n < raw.length; n++) {
+    var entry = raw[n];
+    var owner = entry.ownerId || entry.owner_id || "";
+    var metadata = entry.metadata || {};
+    var stats = statsById[owner] || {};
+
+    var wins = Number(metadata.wins);
+    if (Number.isNaN(wins)) {
+      wins = Number(entry.score || 0);
+    }
+
+    var streak = Number(metadata.streak);
+    if (Number.isNaN(streak)) {
+      streak = Number(entry.subscore || 0);
+    }
+
+    var losses = Number(metadata.losses);
+    if (Number.isNaN(losses)) {
+      losses = Number(stats.losses || 0);
+    }
+
+    var username = entry.username || usernamesById[owner] || owner.slice(0, 8);
+
+    records.push({
+      owner_id: owner,
+      username: username,
+      score: wins,
+      subscore: streak,
+      metadata: {
+        wins: wins,
+        losses: losses,
+        streak: streak,
+      },
+    });
+  }
+
+  return {
+    records: records,
+  };
 }
 
 var rpcGetLeaderboard = function (ctx, logger, nk, payload) {
