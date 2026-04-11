@@ -579,28 +579,32 @@ var rpcCreateMatch = function (ctx, logger, nk, payload) {
   return JSON.stringify({ matchId: matchId });
 };
 
-var InitModule = function (ctx, logger, nk, initializer) {
+function InitModule(ctx, logger, nk, initializer) {
   try {
-    nk.leaderboardCreate("global_wins", false, "desc", "best", "0 0 * * 1", {
-      title: "Global Wins",
-      category: "tictactoe",
+    try {
+      nk.leaderboardCreate("global_wins", false, "desc", "best", "0 0 * * 1", {
+        title: "Global Wins",
+        category: "tictactoe",
+      });
+    } catch (err) {
+      logger.info("global_wins leaderboard exists or could not be created: " + err);
+    }
+
+    initializer.registerMatch("tic_tac_toe", {
+      matchInit: matchInit,
+      matchJoinAttempt: matchJoinAttempt,
+      matchJoin: matchJoin,
+      matchLeave: matchLeave,
+      matchLoop: matchLoop,
+      matchTerminate: matchTerminate,
+      matchSignal: matchSignal,
     });
+    initializer.registerRpc("get_leaderboard", rpcGetLeaderboard);
+    initializer.registerRpc("get_my_stats", rpcGetMyStats);
+    initializer.registerRpc("create_ttt_match", rpcCreateMatch);
+
+    logger.info("Tic-Tac-Toe authoritative module initialized.");
   } catch (err) {
-    logger.info("global_wins leaderboard exists or could not be created: %v", err);
+    logger.error("Tic-Tac-Toe module initialization failed: " + err);
   }
-
-  initializer.registerMatch("tic_tac_toe", {
-    matchInit: matchInit,
-    matchJoinAttempt: matchJoinAttempt,
-    matchJoin: matchJoin,
-    matchLeave: matchLeave,
-    matchLoop: matchLoop,
-    matchTerminate: matchTerminate,
-    matchSignal: matchSignal,
-  });
-  initializer.registerRpc("get_leaderboard", rpcGetLeaderboard);
-  initializer.registerRpc("get_my_stats", rpcGetMyStats);
-  initializer.registerRpc("create_ttt_match", rpcCreateMatch);
-
-  logger.info("Tic-Tac-Toe authoritative module initialized.");
-};
+}

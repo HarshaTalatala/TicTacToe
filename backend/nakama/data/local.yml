@@ -1,11 +1,9 @@
-name: nakama1
+name: "nakama1"
+
 socket:
-  server_key: devkey
+  server_key: "defaultkey"
   port: 7350
-session:
-  token_expiry_sec: 7200
-console:
-  port: 7351
+
 runtime:
   path: "/nakama/data/modules"
   js_entrypoint: "tictactoe.js"
