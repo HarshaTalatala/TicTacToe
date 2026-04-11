@@ -5,11 +5,6 @@ socket:
   port: 7350
   cors_allow_origins:
     - "*"
-  response_headers:
-    Access-Control-Allow-Origin: "*"
-    Access-Control-Allow-Methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-    Access-Control-Allow-Headers: "Authorization, Content-Type, User-Agent"
-    Access-Control-Allow-Credentials: "false"
 
 runtime:
   path: "/nakama/data/modules"
