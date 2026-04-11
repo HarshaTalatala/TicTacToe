@@ -46,9 +46,9 @@ type LeaderboardRecord = {
   }
 }
 
-const NAKAMA_HOST = import.meta.env.VITE_NAKAMA_HOST || 'lovely-joy-production-efed.up.railway.app'
+const NAKAMA_HOST = import.meta.env.VITE_NAKAMA_HOST || 'tic-tac-toe-nakama.up.railway.app'
 const NAKAMA_PORT = import.meta.env.VITE_NAKAMA_PORT || '443'
-const NAKAMA_SERVER_KEY = import.meta.env.VITE_NAKAMA_SERVER_KEY || 'devkey'
+const NAKAMA_SERVER_KEY = import.meta.env.VITE_NAKAMA_SERVER_KEY || 'defaultkey'
 
 function getOrCreateDeviceId(username: string) {
   const safeUsername = username.trim().toLowerCase() || 'guest'
