@@ -46,7 +46,7 @@ type LeaderboardRecord = {
   }
 }
 
-const NAKAMA_HOST = import.meta.env.VITE_NAKAMA_HOST || 'tic-tac-toe-nakama.up.railway.app'
+const NAKAMA_HOST = import.meta.env.VITE_NAKAMA_HOST || 'tictactoe-production-8642.up.railway.app'
 const NAKAMA_PORT = import.meta.env.VITE_NAKAMA_PORT || '443'
 const NAKAMA_SERVER_KEY = import.meta.env.VITE_NAKAMA_SERVER_KEY || 'defaultkey'
 
