@@ -23,6 +23,7 @@ function emptyBoard() {
 function initialState(params) {
   var mode = (params && params.mode) || "classic";
   var timeoutSeconds = Number((params && params.turnTimeoutSeconds) || 30);
+  var roomName = (params && params.roomName) || "Open Room";
   return {
     board: emptyBoard(),
     players: {},
@@ -32,6 +33,7 @@ function initialState(params) {
     winnerSymbol: null,
     moveCount: 0,
     mode: mode,
+    roomName: roomName,
     turnTimeoutSeconds: timeoutSeconds,
     turnDeadlineTick: null,
     currentTick: 0,
@@ -43,6 +45,7 @@ function initialState(params) {
 
 function makeLabel(state) {
   return JSON.stringify({
+    roomName: state.roomName,
     mode: state.mode,
     status: state.status,
     players: Object.keys(state.players).length,
@@ -69,6 +72,7 @@ function publicState(state) {
     winnerSymbol: state.winnerSymbol,
     moveCount: state.moveCount,
     mode: state.mode,
+    roomName: state.roomName,
     turnTimeoutSeconds: state.turnTimeoutSeconds,
     turnDeadlineTick: state.turnDeadlineTick,
     currentTick: state.currentTick,
@@ -556,9 +560,20 @@ var rpcCreateMatch = function (ctx, logger, nk, payload) {
 
   var mode = parsed.mode === "timed" ? "timed" : "classic";
   var timeout = Number(parsed.turnTimeoutSeconds || 30);
+  var creatorName = (ctx.username || "Player").trim();
+  var defaultRoomName = creatorName + "'s Room";
+  var roomName = (parsed.roomName || defaultRoomName).trim();
+  if (!roomName) {
+    roomName = defaultRoomName;
+  }
+  if (roomName.length > 40) {
+    roomName = roomName.slice(0, 40);
+  }
+
   var matchId = nk.matchCreate("tic_tac_toe", {
     mode: mode,
     turnTimeoutSeconds: timeout,
+    roomName: roomName,
   });
 
   return JSON.stringify({ matchId: matchId });

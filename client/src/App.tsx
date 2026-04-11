@@ -27,6 +27,7 @@ type MatchStateView = {
 
 type RoomItem = {
   matchId: string
+  roomName: string
   mode: 'classic' | 'timed'
   status: 'waiting' | 'playing' | 'finished' | 'unknown'
   players: number
@@ -86,23 +87,25 @@ function decodeMatchPayload(data: unknown) {
 
 function parseRoomLabel(label: string | undefined) {
   if (!label) {
-    return { mode: 'classic' as const, status: 'unknown' as const, players: 0 }
+    return { roomName: 'Open Room', mode: 'classic' as const, status: 'unknown' as const, players: 0 }
   }
 
   try {
     const parsed = JSON.parse(label) as {
+      roomName?: string
       mode?: 'classic' | 'timed'
       status?: 'waiting' | 'playing' | 'finished'
       players?: number
     }
 
     return {
+      roomName: (parsed.roomName || 'Open Room').trim() || 'Open Room',
       mode: parsed.mode || 'classic',
       status: parsed.status || 'unknown',
       players: Number(parsed.players || 0),
     }
   } catch {
-    return { mode: 'classic' as const, status: 'unknown' as const, players: 0 }
+    return { roomName: 'Open Room', mode: 'classic' as const, status: 'unknown' as const, players: 0 }
   }
 }
 
@@ -160,6 +163,8 @@ function App() {
 
     return Object.entries(state.players)
   }, [state])
+
+  const topLeaderboard = useMemo(() => leaderboard.slice(0, 5), [leaderboard])
 
   async function signIn() {
     if (!username.trim()) {
@@ -234,6 +239,7 @@ function App() {
         const labelData = parseRoomLabel(match.label)
         return {
           matchId: match.match_id,
+          roomName: labelData.roomName,
           mode: labelData.mode,
           status: labelData.status,
           players: labelData.players,
@@ -255,7 +261,7 @@ function App() {
     }
 
     try {
-      const rpc = await useClient.rpc(useSession, 'get_leaderboard', { limit: 10 })
+      const rpc = await useClient.rpc(useSession, 'get_leaderboard', { limit: 5 })
       let body: { records?: LeaderboardRecord[] } = {}
       const payload: unknown = rpc.payload
 
@@ -277,7 +283,7 @@ function App() {
         },
       }))
 
-      setLeaderboard(normalized)
+      setLeaderboard(normalized.slice(0, 5))
     } catch (error) {
       setStatusLine('Leaderboard is not available yet.')
     }
@@ -428,12 +434,12 @@ function App() {
               <span>{rooms.length} room{rooms.length === 1 ? '' : 's'}</span>
             </div>
 
-            <div className="room-list">
+            <div className={rooms.length === 1 ? 'room-list room-list-single' : 'room-list'}>
               {rooms.length === 0 && <p>No rooms found. Create one to start.</p>}
               {rooms.map((room) => (
                 <div key={room.matchId} className="room-item">
                   <div>
-                    <strong>{room.matchId.slice(0, 8)}</strong>
+                    <strong>{room.roomName}</strong>
                     <span>Mode: {room.mode}</span>
                     <span>Status: {room.status}</span>
                     <span>Players: {room.players || room.size}/2</span>
@@ -500,26 +506,26 @@ function App() {
 
           <section className="panel leaderboard-panel">
             <div className="leaderboard-head">
-              <h2>Leaderboard</h2>
+              <h2>Top 5 Leaderboard</h2>
               <button type="button" onClick={() => refreshLeaderboard()}>
                 Refresh
               </button>
             </div>
-            {leaderboard.length === 0 && <p>No leaderboard records yet.</p>}
-            {leaderboard.length > 0 && (
+            {topLeaderboard.length === 0 && <p>No leaderboard records yet.</p>}
+            {topLeaderboard.length > 0 && (
               <div className="table-wrap">
-                <table>
+                <table className="leaderboard-table">
                   <thead>
                     <tr>
                       <th>Rank</th>
                       <th>Player</th>
                       <th>Wins</th>
                       <th>Streak</th>
-                      <th>Losses</th>
+                      <th className="hide-mobile">Losses</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {leaderboard.map((entry, index) => {
+                    {topLeaderboard.map((entry, index) => {
                       const ownerId = entry.owner_id || 'unknown-player'
                       const playerName = entry.username || ownerId.slice(0, 8)
                       const wins = entry.metadata?.wins ?? entry.score ?? 0
@@ -527,12 +533,14 @@ function App() {
                       const losses = entry.metadata?.losses ?? 0
 
                       return (
-                        <tr key={ownerId + '-' + index}>
-                          <td>{index + 1}</td>
+                        <tr key={ownerId + '-' + index} className={index === 0 ? 'leaderboard-row-top' : ''}>
+                          <td>
+                            <span className="rank-pill">#{index + 1}</span>
+                          </td>
                           <td>{playerName}</td>
                           <td>{wins}</td>
                           <td>{streak}</td>
-                          <td>{losses}</td>
+                          <td className="hide-mobile">{losses}</td>
                         </tr>
                       )
                     })}
