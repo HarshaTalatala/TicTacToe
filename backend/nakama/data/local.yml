@@ -1,5 +1,9 @@
 name: "nakama1"
 
+http:
+  cors_allow_origins:
+    - "*"
+
 socket:
   server_key: "defaultkey"
   port: 7350
