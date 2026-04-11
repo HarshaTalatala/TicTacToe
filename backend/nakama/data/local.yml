@@ -3,6 +3,11 @@ name: "nakama1"
 socket:
   server_key: "defaultkey"
   port: 7350
+  response_headers:
+    Access-Control-Allow-Origin: "*"
+    Access-Control-Allow-Methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    Access-Control-Allow-Headers: "Authorization, Content-Type, User-Agent"
+    Access-Control-Allow-Credentials: "false"
 
 runtime:
   path: "/nakama/data/modules"
