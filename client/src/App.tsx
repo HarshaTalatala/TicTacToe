@@ -46,8 +46,8 @@ type LeaderboardRecord = {
   }
 }
 
-const NAKAMA_HOST = import.meta.env.VITE_NAKAMA_HOST || '127.0.0.1'
-const NAKAMA_PORT = import.meta.env.VITE_NAKAMA_PORT || '7350'
+const NAKAMA_HOST = import.meta.env.VITE_NAKAMA_HOST || 'lovely-joy-production-efed.up.railway.app'
+const NAKAMA_PORT = import.meta.env.VITE_NAKAMA_PORT || '443'
 const NAKAMA_SERVER_KEY = import.meta.env.VITE_NAKAMA_SERVER_KEY || 'devkey'
 
 function getOrCreateDeviceId(username: string) {
@@ -176,9 +176,9 @@ function App() {
 
     setLoading(true)
     try {
-      const client = new Client(NAKAMA_SERVER_KEY, NAKAMA_HOST, NAKAMA_PORT, false)
+      const client = new Client(NAKAMA_SERVER_KEY, NAKAMA_HOST, NAKAMA_PORT, true)
       const session = await client.authenticateDevice(getOrCreateDeviceId(normalizedUsername), true, normalizedUsername)
-      const socket = client.createSocket(false, true)
+      const socket = client.createSocket(true, true)
       await socket.connect(session, false)
 
       socket.onmatchdata = (message: any) => {
